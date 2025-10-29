@@ -7,12 +7,16 @@ struct RatesView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // Показуємо індикатор завантаження.
-                if viewModel.isLoading && viewModel.rates.isEmpty { // Показуємо тільки при першому завантаженні
+                // --- ОНОВЛЕНА ЛОГІКА ДЛЯ ПЛАВНОСТІ ---
+
+                // 1. Показуємо індикатор ТІЛЬКИ при першому запуску (коли список порожній)
+                if viewModel.isLoading && viewModel.rates.isEmpty {
                     ProgressView("Завантаження курсів...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                // Показуємо повідомлення про помилку.
-                else if let errorMessage = viewModel.errorMessage {
+                
+                // 2. Показуємо помилку ТІЛЬКИ при першому запуску (якщо список порожній)
+                else if let errorMessage = viewModel.errorMessage, viewModel.rates.isEmpty {
                     VStack {
                         Text("⚠️")
                             .font(.largeTitle)
@@ -25,37 +29,49 @@ struct RatesView: View {
                         }
                         .buttonStyle(.borderedProminent)
                     }
-                }
-                // Показуємо список курсів.
-                else {
-                    List {
-                                            // Сортуємо валюти за алфавітом для зручності.
-                                            ForEach(viewModel.rates.keys.sorted(), id: \.self) { currency in
-                                                if let rate = viewModel.rates[currency] {
-                                                    CurrencyRow(
-                                                        currencyCode: currency,
-                                                        rate: rate,
-                                                        baseCurrency: viewModel.baseCurrency
-                                                    )
-                                                }
-                                            }
-                                        }
-                    // --- ДОДАНО PULL-TO-REFRESH ---
-                    // Додаємо можливість оновлення списку потягуванням
-                    .refreshable {
-                        viewModel.fetchRates()
-                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 
-                // Відображення дати останнього оновлення.
-                Text(viewModel.lastUpdated)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.bottom)
+                // 3. В УСІХ ІНШИХ ВИПАДКАХ (включаючи refresh, коли дані вже є) - показуємо список
+                else {
+                    List {
+                        ForEach(viewModel.rates.keys.sorted(), id: \.self) { currency in
+                            if let rate = viewModel.rates[currency] {
+                                CurrencyRow(
+                                    currencyCode: currency,
+                                    rate: rate,
+                                    baseCurrency: viewModel.baseCurrency
+                                )
+                            }
+                        }
+                    }
+                    .refreshable {
+                        // .refreshable має свій індикатор,
+                        // тому ми просто викликаємо fetchRates()
+                        viewModel.fetchRates()
+                    }
+                    
+                    // Якщо під час оновлення (коли дані вже є) виникла помилка
+                    if let errorMessage = viewModel.errorMessage, !viewModel.rates.isEmpty {
+                        Text("Помилка оновлення") // Можна показати коротке пов-ня
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.bottom)
+                    } else {
+                        // Відображення дати останнього оновлення.
+                        Text(viewModel.lastUpdated)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom)
+                    }
+                }
             }
+            // Додаємо анімацію на всю VStack.
+            // Це зробить плавний перехід від ProgressView до List при першому запуску.
+            .animation(.default, value: viewModel.isLoading)
             .navigationTitle("Курси Валют")
             .toolbar {
-                // Кнопка вибору базової валюти
+                // Кнопка вибору базової валюти (компактна, через Menu)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Picker("Базова валюта", selection: $viewModel.baseCurrency) {
@@ -74,6 +90,8 @@ struct RatesView: View {
                 }
             }
         }
+        // Виправлення для iPad
+        .navigationViewStyle(.stack)
     }
 }
 

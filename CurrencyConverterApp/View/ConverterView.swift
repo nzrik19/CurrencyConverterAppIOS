@@ -1,15 +1,7 @@
 import SwiftUI
 
-extension View {
-    func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-}
-
-
 struct ConverterView: View {
     @EnvironmentObject var viewModel: ExchangeRateViewModel
-    // @FocusState для керування фокусом клавіатури.
     @FocusState private var isAmountFieldFocused: Bool
 
     var body: some View {
@@ -18,51 +10,77 @@ struct ConverterView: View {
                 // Секція "Я віддаю"
                 Section(header: Text("Я віддаю")) {
                     HStack {
-                        Picker("Валюта", selection: $viewModel.fromCurrency) {
-                            ForEach(viewModel.availableCurrencies, id: \.self) { currency in
-                                // --- ВИПРАВЛЕННЯ: Додаємо прапори ---
-                                Text("\(CurrencyUtils.flag(for: currency)) \(currency)")
-                                    .tag(currency)
+                        // НАДІЙНЕ ВИПРАВЛЕННЯ PICKER
+                        Menu {
+                            Picker("Валюта", selection: $viewModel.fromCurrency) {
+                                ForEach(viewModel.availableCurrencies, id: \.self) { (currency: String) in
+                                    Text("\(CurrencyUtils.flag(for: currency)) \(currency)")
+                                        .tag(currency)
+                                }
                             }
+                            .pickerStyle(.inline)
+                        } label: {
+                            Text("\(CurrencyUtils.flag(for: viewModel.fromCurrency)) \(viewModel.fromCurrency)")
+                                .font(.body)
+                                .foregroundColor(Color.primary)
                         }
-                        .pickerStyle(.menu)
                         
                         TextField("Сума", text: $viewModel.amountToConvert)
-                            .keyboardType(.decimalPad) // Дозволяє вводити і . і ,
+                            .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
-                            .focused($isAmountFieldFocused) // Прив'язка фокусу
+                            .focused($isAmountFieldFocused)
+                            // ДОДАЄМО КНОПКУ "ГОТОВО" НАД КЛАВІАТУРОЮ
+                            .toolbar {
+                                ToolbarItemGroup(placement: .keyboard) {
+                                    Spacer() // Кнопка буде праворуч
+                                    Button("Готово") {
+                                        isAmountFieldFocused = false // Ховаємо клавіатуру
+                                    }
+                                }
+                            }
                     }
                 }
                 
-                // Кнопка для обміну валют місцями
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        viewModel.swapCurrencies()
-                    }) {
-                        Image(systemName: "arrow.up.arrow.down.circle.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.accentColor)
+                // ВИПРАВЛЕННЯ КНОПКИ
+                Section {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            viewModel.swapCurrencies()
+                        }) {
+                            Image(systemName: "arrow.up.arrow.down.circle.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(.accentColor)
+                        }
+                        .contentShape(Rectangle())
+                        Spacer()
                     }
-                    Spacer()
                 }
-                .listRowBackground(Color.clear) // Робимо фон рядка прозорим
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
                 
                 // Секція "Я отримую"
                 Section(header: Text("Я отримую")) {
                     HStack {
-                        Picker("Валюта", selection: $viewModel.toCurrency) {
-                            ForEach(viewModel.availableCurrencies, id: \.self) { currency in
-                                // --- ВИПРАВЛЕННЯ: Додаємо прапори ---
-                                Text("\(CurrencyUtils.flag(for: currency)) \(currency)")
-                                    .tag(currency)
+                        // НАДІЙНЕ ВИПРАВЛЕННЯ PICKER (для "ToCurrency")
+                        Menu {
+                            Picker("Валюта", selection: $viewModel.toCurrency) {
+                                ForEach(viewModel.availableCurrencies, id: \.self) { (currency: String) in
+                                    Text("\(CurrencyUtils.flag(for: currency)) \(currency)")
+                                        .tag(currency)
+                                }
                             }
+                            .pickerStyle(.inline)
+                        } label: {
+                            Text("\(CurrencyUtils.flag(for: viewModel.toCurrency)) \(viewModel.toCurrency)")
+                                .font(.body)
+                                .foregroundColor(Color.primary)
                         }
-                        .pickerStyle(.menu)
                         
                         Text(String(format: "%.2f", viewModel.convertedAmount))
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                            .contentTransition(.numericText()) // Плавна анімація зміни числа
+                            .contentTransition(.numericText())
+                            .animation(.default, value: viewModel.convertedAmount)
                     }
                 }
                 
@@ -77,10 +95,9 @@ struct ConverterView: View {
                 }
             }
             .navigationTitle("Конвертер")
-            .onTapGesture {
-                hideKeyboard()
-            }
         }
+        // --- ОНОВЛЕННЯ: Додано виправлення для iPad ---
+        .navigationViewStyle(.stack)
     }
 }
 
