@@ -1,6 +1,6 @@
 import Foundation
 
-// Ця структура відповідає JSON-відповіді від ExchangeRate-API..
+// Ця структура відповідає JSON-відповіді від ExchangeRate-API.
 // Вона використовує протокол Codable для легкого декодування.
 struct APIResponse: Codable {
     let result: String

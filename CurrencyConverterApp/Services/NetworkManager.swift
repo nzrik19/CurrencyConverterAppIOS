@@ -1,7 +1,7 @@
 import Foundation
 
 // Клас для обробки мережевих запитів.
-// Використання Singleton патерну, щоб мати один екземпляр на весь додаток..
+// Використання Singleton патерну, щоб мати один екземпляр на весь додаток.
 class NetworkManager {
     
     static let shared = NetworkManager()

@@ -26,7 +26,7 @@ struct RatesView: View {
                         .buttonStyle(.borderedProminent)
                     }
                 }
-                // Показуємо список курсів..
+                // Показуємо список курсів.
                 else {
                     List {
                                             // Сортуємо валюти за алфавітом для зручності.

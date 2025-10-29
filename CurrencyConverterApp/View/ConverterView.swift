@@ -62,7 +62,7 @@ struct ConverterView: View {
                         
                         Text(String(format: "%.2f", viewModel.convertedAmount))
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                            .contentTransition(.numericText()) // Плавна анімація зміни числа.
+                            .contentTransition(.numericText()) // Плавна анімація зміни числа
                     }
                 }
                 

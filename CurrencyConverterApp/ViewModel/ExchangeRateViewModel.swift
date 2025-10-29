@@ -17,7 +17,7 @@ class ExchangeRateViewModel: ObservableObject {
     @Published var fromCurrency: String = "USD"
     @Published var toCurrency: String = "UAH"
     
-    // Властивість для базової валюти, що зберігається локально..
+    // Властивість для базової валюти, що зберігається локально.
     @Published var baseCurrency: String {
         didSet {
             // Коли базова валюта змінюється, зберігаємо її та оновлюємо курси.

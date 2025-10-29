@@ -14,7 +14,7 @@ struct CurrencyRow: View {
                 .font(.largeTitle) // Великий шрифт для гарного емодзі
                 .frame(width: 40, height: 40, alignment: .center) // Фіксований розмір
                 .background(Color(UIColor.systemGray6)) // Легкий фон-контейнер
-                .clipShape(RoundedRectangle(cornerRadius: 6)) // Заокруглені кути.
+                .clipShape(RoundedRectangle(cornerRadius: 6)) // Заокруглені кути
             
             VStack(alignment: .leading) {
                 Text(currencyCode)

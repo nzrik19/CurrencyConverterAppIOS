@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     // Створюємо єдиний екземпляр ViewModel для всього додатку.
-    // @StateObject гарантує, що ViewModel буде жити, поки живе View..
+    // @StateObject гарантує, що ViewModel буде жити, поки живе View.
     @StateObject private var viewModel = ExchangeRateViewModel()
 
     var body: some View {
