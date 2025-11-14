@@ -1,52 +1,85 @@
 import SwiftUI
 
 struct CurrencyRow: View {
-    let currencyCode: String
-    let rate: Double
-    let baseCurrency: String
+// Нам потрібен viewModel, щоб отримати доступ до словника назв
+@EnvironmentObject var viewModel: ExchangeRateViewModel
 
-    var body: some View {
-        HStack {
-            // --- ФІКСОВАНИЙ РОЗМІР ПРАПОРА ---
-            // Встановлюємо фіксований розмір для Text,
-            // щоб усі елементи списку були вирівняні.
-            Text(CurrencyUtils.flag(for: currencyCode))
-                .font(.largeTitle) // Великий шрифт для гарного емодзі
-                .frame(width: 40, height: 40, alignment: .center) // Фіксований розмір
-                .background(Color(UIColor.systemGray6)) // Легкий фон-контейнер
-                .clipShape(RoundedRectangle(cornerRadius: 6)) // Заокруглені кути
+let currencyCode: String
+let rate: Double
+let baseCurrency: String
+
+// Приватна властивість для отримання назви
+private var currencyName: String {
+    // Беремо назву з viewModel, або показуємо код, якщо назва ще не завантажилась
+    viewModel.currencyNames[currencyCode] ?? currencyCode
+}
+
+var body: some View {
+    HStack {
+        // Прапор
+        Text(CurrencyUtils.flag(for: currencyCode))
+            .font(.largeTitle)
+            .frame(width: 40, height: 40)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        
+        // --- ОНОВЛЕНИЙ ФОРМАТ ---
+        // Назва валюти та (Код)
+        VStack(alignment: .leading) {
+            // Повна назва (напр., "Japanese Yen")
+            Text(currencyName)
+                .font(.headline)
             
-            VStack(alignment: .leading) {
+            // Код (напр., "JPY")
+            // Ми показуємо код, лише якщо він *не* збігається з назвою
+            // (на випадок, якщо назва ще не завантажилась)
+            if currencyName != currencyCode {
                 Text(currencyCode)
-                    .font(.headline)
-                // Форматуємо рядок для курсу
-                Text("1 \(currencyCode) = \(String(format: "%.4f", rate)) \(baseCurrency)")
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
-            Spacer()
-            
-            // Відображення основного курсу
-            Text(String(format: "%.4f", rate))
-                .font(.body)
-                .fontWeight(.medium)
         }
-        .padding(.vertical, 4) // Невеликий відступ для кращої читабельності
+        // --- КІНЕЦЬ ОНОВЛЕННЯ ---
+        
+        Spacer()
+        
+        // Курс
+        VStack(alignment: .trailing) {
+            Text(String(format: "%.4f", rate))
+                .font(.headline)
+                .contentTransition(.numericText())
+            
+            Text("1 \(currencyCode) = \(String(format: "%.4f", 1 / rate)) \(baseCurrency)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .contentTransition(.numericText())
+        }
+        .animation(.default, value: rate)
     }
+    .padding(.vertical, 4)
+}
+
+
 }
 
 struct CurrencyRow_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            CurrencyRow(currencyCode: "USD", rate: 40.5123, baseCurrency: "UAH")
-                .previewLayout(.sizeThatFits)
-                .padding()
-            
-            CurrencyRow(currencyCode: "ANG", rate: 23.5123, baseCurrency: "UAH")
-                .previewLayout(.sizeThatFits)
-                .padding()
-        }
+static var previews: some View {
+// Створюємо "мок" viewModel для прев'ю
+let mockViewModel = ExchangeRateViewModel()
+mockViewModel.rates = ["USD": 40.50, "JPY": 0.25]
+mockViewModel.currencyNames = ["USD": "US Dollar", "JPY": "Japanese Yen"]
+
+    return Group {
+        CurrencyRow(currencyCode: "USD", rate: 40.50, baseCurrency: "UAH")
+            .previewLayout(.sizeThatFits)
+            .padding()
+        
+        CurrencyRow(currencyCode: "JPY", rate: 0.25, baseCurrency: "UAH")
+            .previewLayout(.sizeThatFits)
+            .padding()
     }
+    .environmentObject(mockViewModel) // Передаємо мок у прев'ю
 }
 
+
+}

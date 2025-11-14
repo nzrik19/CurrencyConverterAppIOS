@@ -1,69 +1,119 @@
 import Foundation
 
-// Клас для обробки мережевих запитів.
-// Використання Singleton патерну, щоб мати один екземпляр на весь додаток.
 class NetworkManager {
-    
-    static let shared = NetworkManager()
-    private init() {}
-    
-    private let baseURL = "https://v6.exchangerate-api.com/v6/"
-    // Ваш API ключ, який ви надали
-    private let apiKey = "9c9c6b691ab45ef6201410dc"
 
-    // Використання async/await для сучасного асинхронного коду.
-    func fetchRates(for baseCurrency: String) async throws -> APIResponse {
-        
-        // --- ВИПРАВЛЕННЯ: Перевірка на оригіaнальну заглушку "YOUR_API_KEY" ---
-        // Ця перевірка тепер пройде успішно, оскільки ваш ключ не "YOUR_API_KEY".
-        guard apiKey != "YOUR_API_KEY" else {
-            throw NetworkError.apiKeyMissing
+static let shared = NetworkManager()
+private init() {}
+
+private let baseURL = "https://v6.exchangerate-api.com/v6/"
+private let apiKey = "9c9c6b691ab45ef6201410dc"
+
+// 1. Завантаження курсів
+func fetchRates(for baseCurrency: String) async throws -> APIResponse {
+    guard apiKey != "YOUR_API_KEY" else {
+        throw NetworkError.apiKeyMissing
+    }
+    
+    let urlString = "\(baseURL)\(apiKey)/latest/\(baseCurrency)"
+    
+    guard let url = URL(string: urlString) else {
+        throw NetworkError.invalidURL
+    }
+    
+    let (data, response) = try await URLSession.shared.data(from: url)
+    
+    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        // Спробуємо декодувати помилку, якщо вона є
+        if let errorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+            throw NetworkError.apiError(errorResponse.errorType)
         }
-        
-        let urlString = "\(baseURL)\(apiKey)/latest/\(baseCurrency)"
-        
-        guard let url = URL(string: urlString) else {
-            throw NetworkError.invalidURL
-        }
-        
-        // Робимо запит і отримуємо дані та відповідь.
-        let (data, response) = try await URLSession.shared.data(from: url)
-        
-        // Перевіряємо, чи відповідь є успішною (статус код 200).
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            // Якщо сюди приходить помилка, перевірте правильність ключа на сайті API
-            throw NetworkError.serverError
-        }
-        
-        // Декодуємо отримані дані в нашу модель APIResponse.
-        do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(APIResponse.self, from: data)
-        } catch {
-            throw NetworkError.decodingError(error)
-        }
+        throw NetworkError.serverError
+    }
+    
+    do {
+        let decoder = JSONDecoder()
+        return try decoder.decode(APIResponse.self, from: data)
+    } catch {
+        throw NetworkError.decodingError(error)
     }
 }
 
-// Перелік можливих помилок мережі для кращої обробки.
+// 2. НОВА ФУНКЦІЯ: Завантаження назв валют
+func fetchCurrencyNames() async throws -> APICodesResponse {
+    guard apiKey != "YOUR_API_KEY" else {
+        throw NetworkError.apiKeyMissing
+    }
+    
+    let urlString = "\(baseURL)\(apiKey)/codes"
+    
+    guard let url = URL(string: urlString) else {
+        throw NetworkError.invalidURL
+    }
+    
+    let (data, response) = try await URLSession.shared.data(from: url)
+    
+    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        if let errorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+            throw NetworkError.apiError(errorResponse.errorType)
+        }
+        throw NetworkError.serverError
+    }
+    
+    do {
+        let decoder = JSONDecoder()
+        return try decoder.decode(APICodesResponse.self, from: data)
+    } catch {
+        throw NetworkError.decodingError(error)
+    }
+}
+
+
+}
+
+// Покращена обробка помилок
+struct APIErrorResponse: Codable {
+let result: String
+let errorType: String
+
+enum CodingKeys: String, CodingKey {
+    case result
+    case errorType = "error-type"
+}
+
+
+}
+
 enum NetworkError: Error, LocalizedError {
-    case apiKeyMissing
-    case invalidURL
-    case serverError
-    case decodingError(Error)
-    
-    var errorDescription: String? {
-        switch self {
-        case .apiKeyMissing:
-            return "Будь ласка, вставте ваш API ключ у файл NetworkManager.swift"
-        case .invalidURL:
-            return "Неправильна URL адреса."
-        case .serverError:
-            // Ця помилка може також виникати, якщо ваш API ключ недійсний або акаунт заблоковано.
-            return "Помилка на сервері (або невірний API ключ)."
-        case .decodingError(let error):
-            return "Помилка декодування даних: \(error.localizedDescription)"
+case apiKeyMissing
+case invalidURL
+case serverError
+case decodingError(Error)
+case apiError(String) // Специфічна помилка від API
+
+var errorDescription: String? {
+    switch self {
+    case .apiKeyMissing:
+        return "Будь ласка, вставте ваш API ключ у файл NetworkManager.swift"
+    case .invalidURL:
+        return "Неправильна URL адреса."
+    case .serverError:
+        return "Помилка на сервері."
+    case .decodingError(let error):
+        return "Помилка декодування даних: \(error.localizedDescription)"
+    case .apiError(let type):
+        // Повертаємо зрозуміліший текст помилки
+        switch type {
+        case "invalid-key":
+            return "Невірний API ключ."
+        case "inactive-account":
+            return "Акаунт неактивний."
+        case "unsupported-code":
+            return "Код валюти не підтримується."
+        default:
+            return "Помилка API: \(type)"
         }
     }
 }
 
+
+}

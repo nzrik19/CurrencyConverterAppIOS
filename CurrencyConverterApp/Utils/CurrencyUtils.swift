@@ -1,36 +1,32 @@
 import Foundation
 
-// Допоміжна структура для роботи з валютами
-struct CurrencyUtils {
+// Допоміжний клас для роботи з валютами.
+// Ми видалили звідси "довідник", оскільки він тепер приходить з API.
+class CurrencyUtils {
+
+// Функція для отримання Емодзі-прапору за кодом валюти
+static func flag(for currencyCode: String) -> String {
+    // Базове зміщення для Емодзі-літер
+    let base: UInt32 = 127397
     
-    /**
-     Перетворює код валюти (ISO 4217) на емодзі прапора.
-     Наприклад, "UAH" -> "UA" -> 🇺🇦
-     */
-    static func flag(for currencyCode: String) -> String {
-        // Спеціальний випадок для Євро, оскільки "EU" не є кодом країни
-        if currencyCode == "EUR" {
-            return "🇪🇺"
-        }
-        
-        // Беремо перші дві літери коду валюти (зазвичай це код країни ISO 3166-1)
-        let countryCode = String(currencyCode.prefix(2))
-        
-        // Конвертуємо код країни (напр., "UA") в емодзі прапора (напр., "🇺🇦")
-        let base: UInt32 = 127397 // U+1F1E6 (Regional Indicator A) - U+0041 (Latin A)
-        
-        var flag = ""
-        for scalar in countryCode.uppercased().unicodeScalars {
-            // Переконуємось, що це латинська літера (A-Z)
-            if scalar.value >= 0x0041 && scalar.value <= 0x005A {
-                if let regionalScalar = UnicodeScalar(base + scalar.value) {
-                    flag.append(String(regionalScalar))
-                }
-            }
-        }
-        
-        // Повертаємо прапор, або 💰 як запасний варіант, якщо щось пішло не так
-        return flag.unicodeScalars.count == 2 ? flag : "💰"
+    // Переконуємося, що код має 2 літери (напр., "UA" з "UAH")
+    let countryCode = String(currencyCode.prefix(2))
+    
+    // Перевіряємо, чи код складається з 2-х латинських літер
+    guard countryCode.count == 2 &&
+          countryCode.unicodeScalars.allSatisfy({ $0.value >= 65 && $0.value <= 90 }) else {
+        return "🏳️" // Повертаємо білий прапор, якщо код невірний
     }
+
+    // Перетворюємо літери коду (напр., 'U' та 'A') в Емодзі
+    var flagString = ""
+    for scalar in countryCode.unicodeScalars {
+        if let regionalScalar = UnicodeScalar(base + scalar.value) {
+            flagString.unicodeScalars.append(regionalScalar)
+        }
+    }
+    return flagString
 }
 
+
+}

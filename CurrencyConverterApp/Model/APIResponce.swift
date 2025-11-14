@@ -1,11 +1,22 @@
 import Foundation
 
-// Ця структура відповідає JSON-відповіді від ExchangeRate-API.
-// Вона використовує протокол Codable для легкого декодування.
+// Модель для /v6/YOUR-KEY/latest/USD
 struct APIResponse: Codable {
-    let result: String
-    let time_last_update_utc: String // Дата/час у форматі UTC
-    let base_code: String // Базова валюта, яку ми запитували
-    let conversion_rates: [String: Double] // Словник курсів
+let result: String
+let timeLastUpdateUTC: String
+let baseCode: String
+
+// --- ВИПРАВЛЕННЯ: Ця властивість була відсутня ---
+let conversionRates: [String: Double]
+// ----------------------------------------------
+
+// Кастомні ключі для декодування
+enum CodingKeys: String, CodingKey {
+    case result
+    case timeLastUpdateUTC = "time_last_update_utc"
+    case baseCode = "base_code"
+    case conversionRates = "conversion_rates" // Додаємо ключ
 }
 
+
+}
