@@ -96,7 +96,6 @@ struct ConverterView: View {
             }
             .navigationTitle("Конвертер")
         }
-        // --- ОНОВЛЕННЯ: Додано виправлення для iPad ---
         .navigationViewStyle(.stack)
     }
 }
