@@ -1,13 +1,5 @@
 import SwiftUI
 
-#if canImport(UIKit)
-extension View {
-    func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-}
-#endif
-
 struct MainView: View {
     // Створюємо єдиний екземпляр ViewModel для всього додатку.
     // @StateObject гарантує, що ViewModel буде жити, поки живе View.
