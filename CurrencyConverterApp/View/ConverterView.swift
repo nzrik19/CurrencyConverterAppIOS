@@ -29,19 +29,22 @@ struct ConverterView: View {
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .focused($isAmountFieldFocused)
-                            // ДОДАЄМО КНОПКУ "ГОТОВО" НАД КЛАВІАТУРОЮ
+                            // ДОДАЄМО КНОПКУ "ГОТОВО"
                             .toolbar {
                                 ToolbarItemGroup(placement: .keyboard) {
-                                    Spacer() // Кнопка буде праворуч
+                                    Spacer()
                                     Button("Готово") {
-                                        isAmountFieldFocused = false // Ховаємо клавіатуру
+                                        isAmountFieldFocused = false
                                     }
                                 }
                             }
                     }
+                    // --- ДОДАНО ВІДСТУПИ ---
+                    .padding(.horizontal, 8) // Додатковий відступ з боків
+                    .padding(.vertical, 4)   // Трохи більше "повітря" зверху і знизу
                 }
                 
-                // ВИПРАВЛЕННЯ КНОПКИ
+                // Кнопка обміну
                 Section {
                     HStack {
                         Spacer()
@@ -62,7 +65,6 @@ struct ConverterView: View {
                 // Секція "Я отримую"
                 Section(header: Text("Я отримую")) {
                     HStack {
-                        // НАДІЙНЕ ВИПРАВЛЕННЯ PICKER (для "ToCurrency")
                         Menu {
                             Picker("Валюта", selection: $viewModel.toCurrency) {
                                 ForEach(viewModel.availableCurrencies, id: \.self) { (currency: String) in
@@ -82,12 +84,14 @@ struct ConverterView: View {
                             .contentTransition(.numericText())
                             .animation(.default, value: viewModel.convertedAmount)
                     }
+                    // --- ДОДАНО ВІДСТУПИ ---
+                    .padding(.horizontal, 8) // Додатковий відступ з боків
+                    .padding(.vertical, 4)   // Трохи більше "повітря" зверху і знизу
                 }
                 
                 // Секція з індикативним курсом
                 Section {
                     if let fromRate = viewModel.rates[viewModel.fromCurrency], let toRate = viewModel.rates[viewModel.toCurrency], fromRate > 0 {
-                        // Рахуємо крос-курс: 1 "From" = X "To"
                         let singleUnitRate = toRate / fromRate
                         Text("1 \(viewModel.fromCurrency) = \(String(format: "%.4f", singleUnitRate)) \(viewModel.toCurrency)")
                             .foregroundColor(.secondary)
@@ -106,4 +110,3 @@ struct ConverterView_Previews: PreviewProvider {
             .environmentObject(ExchangeRateViewModel())
     }
 }
-

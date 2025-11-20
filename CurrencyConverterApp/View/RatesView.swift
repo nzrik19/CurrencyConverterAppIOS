@@ -18,13 +18,13 @@ struct RatesView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) { // Головний контейнер
+            VStack(spacing: 0) {
                 
-                // --- Список Валют (Займає весь вільний простір) ---
                 List {
                     // --- Секція Пошуку ---
                     Section {
                         HStack(spacing: 12) {
+                            // Сіра плашка пошуку
                             HStack {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(.gray)
@@ -32,18 +32,28 @@ struct RatesView: View {
                                 TextField("Пошук", text: $searchText)
                                     .textFieldStyle(.plain)
                                 
-                                if !searchText.isEmpty {
-                                    Button(action: { searchText = "" }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.gray)
-                                    }
-                                }
+                                // ВИПРАВЛЕННЯ 1: Хрестик всередині поля ВИДАЛЕНО
                             }
                             .padding(.vertical, 10)
                             .padding(.horizontal, 12)
                             .background(Color(.systemGray6))
                             .cornerRadius(10)
+                            
+                            // ВИПРАВЛЕННЯ 2: Кнопка "Скасувати" з'являється ТІЛЬКИ коли є текст
+                            if !searchText.isEmpty {
+                                Button("Скасувати") {
+                                    withAnimation {
+                                        searchText = "" // Очищуємо текст
+                                        // Ховаємо клавіатуру
+                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    }
+                                }
+                                .foregroundColor(.accentColor)
+                                .transition(.move(edge: .trailing).combined(with: .opacity)) // Анімація появи
+                            }
                         }
+                        // Анімація для кнопки "Скасувати"
+                        .animation(.default, value: searchText.isEmpty)
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -88,18 +98,17 @@ struct RatesView: View {
                     viewModel.fetchRates()
                 }
                 
-                // --- ВИПРАВЛЕННЯ: Дата оновлення закріплена ЗНИЗУ ---
-                // Вона знаходиться ПІД списком, тому її видно завжди
+                // --- Дата оновлення (Закріплена знизу) ---
                 if !viewModel.rates.isEmpty {
                     VStack {
-                        Divider() // Тонка лінія відділення
+                        Divider()
                         Text(viewModel.lastUpdated)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 8)
                             .padding(.bottom, 8)
                     }
-                    .background(Color(.systemBackground)) // Фон
+                    .background(Color(.systemBackground))
                 }
             }
             .navigationTitle("Курси Валют")

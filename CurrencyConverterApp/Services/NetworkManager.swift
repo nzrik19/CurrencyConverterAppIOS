@@ -6,7 +6,7 @@ static let shared = NetworkManager()
 private init() {}
 
 private let baseURL = "https://v6.exchangerate-api.com/v6/"
-private let apiKey = "9c9c6b691ab45ef6201410dc"
+private let apiKey = "995bfd247e71c7f663646c47"
 
 // 1. Завантаження курсів
 func fetchRates(for baseCurrency: String) async throws -> APIResponse {
