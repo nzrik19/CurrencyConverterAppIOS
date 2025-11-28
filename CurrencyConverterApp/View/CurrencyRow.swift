@@ -62,24 +62,3 @@ var body: some View {
 
 }
 
-struct CurrencyRow_Previews: PreviewProvider {
-static var previews: some View {
-// Створюємо "мок" viewModel для прев'ю
-let mockViewModel = ExchangeRateViewModel()
-mockViewModel.rates = ["USD": 40.50, "JPY": 0.25]
-mockViewModel.currencyNames = ["USD": "US Dollar", "JPY": "Japanese Yen"]
-
-    return Group {
-        CurrencyRow(currencyCode: "USD", rate: 40.50, baseCurrency: "UAH")
-            .previewLayout(.sizeThatFits)
-            .padding()
-        
-        CurrencyRow(currencyCode: "JPY", rate: 0.25, baseCurrency: "UAH")
-            .previewLayout(.sizeThatFits)
-            .padding()
-    }
-    .environmentObject(mockViewModel) // Передаємо мок у прев'ю
-}
-
-
-}

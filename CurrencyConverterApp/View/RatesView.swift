@@ -3,6 +3,9 @@ import SwiftUI
 struct RatesView: View {
     @EnvironmentObject var viewModel: ExchangeRateViewModel
     @State private var searchText = ""
+    
+    // --- ВИПРАВЛЕННЯ: Керування фокусом для миттєвого ховання клавіатури ---
+    @FocusState private var isSearchFocused: Bool
 
     private var filteredRates: [String] {
         let allSortedKeys = viewModel.rates.keys.sorted()
@@ -20,46 +23,46 @@ struct RatesView: View {
         NavigationView {
             VStack(spacing: 0) {
                 
-                List {
-                    // --- Секція Пошуку ---
-                    Section {
-                        HStack(spacing: 12) {
-                            // Сіра плашка пошуку
-                            HStack {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.gray)
-                                
-                                TextField("Пошук", text: $searchText)
-                                    .textFieldStyle(.plain)
-                                
-                                // ВИПРАВЛЕННЯ 1: Хрестик всередині поля ВИДАЛЕНО
-                            }
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 12)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
+                // --- 1. ПАНЕЛЬ ПОШУКУ ---
+                VStack {
+                    HStack(spacing: 12) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.gray)
                             
-                            // ВИПРАВЛЕННЯ 2: Кнопка "Скасувати" з'являється ТІЛЬКИ коли є текст
-                            if !searchText.isEmpty {
-                                Button("Скасувати") {
-                                    withAnimation {
-                                        searchText = "" // Очищуємо текст
-                                        // Ховаємо клавіатуру
-                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                    }
-                                }
-                                .foregroundColor(.accentColor)
-                                .transition(.move(edge: .trailing).combined(with: .opacity)) // Анімація появи
-                            }
+                            TextField("Пошук (USD, Євро...)", text: $searchText)
+                                .textFieldStyle(.plain)
+                                // Прив'язуємо фокус сюди
+                                .focused($isSearchFocused)
                         }
-                        // Анімація для кнопки "Скасувати"
-                        .animation(.default, value: searchText.isEmpty)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                        
+                        // Кнопка "Скасувати"
+                        if !searchText.isEmpty || isSearchFocused {
+                            Button("Скасувати") {
+                                // Анімуємо все разом: і текст, і клавіатуру
+                                withAnimation {
+                                    searchText = ""
+                                    isSearchFocused = false // Це миттєво ховає клавіатуру
+                                }
+                            }
+                            .foregroundColor(.accentColor)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
                     }
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-
-                    // --- Секція Завантаження/Помилок ---
+                    // Анімація для зміни ширини поля пошуку
+                    .animation(.default, value: searchText.isEmpty)
+                    .animation(.default, value: isSearchFocused)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+                
+                // --- 2. СПИСОК ВАЛЮТ ---
+                List {
                     if viewModel.isLoading && viewModel.rates.isEmpty {
                         HStack {
                             Spacer()
@@ -80,7 +83,6 @@ struct RatesView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                     }
-                    // --- Основний Список Валют ---
                     else {
                         ForEach(filteredRates, id: \.self) { currency in
                             if let rate = viewModel.rates[currency] {
@@ -98,17 +100,17 @@ struct RatesView: View {
                     viewModel.fetchRates()
                 }
                 
-                // --- Дата оновлення (Закріплена знизу) ---
+                // --- 3. ДАТА ОНОВЛЕННЯ ---
                 if !viewModel.rates.isEmpty {
-                    VStack {
+                    VStack(spacing: 0) {
                         Divider()
                         Text(viewModel.lastUpdated)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .padding(.top, 8)
-                            .padding(.bottom, 8)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemBackground))
                     }
-                    .background(Color(.systemBackground))
                 }
             }
             .navigationTitle("Курси Валют")

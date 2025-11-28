@@ -18,7 +18,7 @@ class ExchangeRateViewModel: ObservableObject {
     @Published var currencyNames: [String: String] = [:]
 
     @Published var amountToConvert: String = "1"
-    @Published var fromCurrency: String = "USD"
+    @Published var fromCurrency: String = "EUR"
     @Published var toCurrency: String = "UAH"
     
     var availableCurrencies: [String] {
