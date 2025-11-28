@@ -3,16 +3,16 @@ import SwiftUI
 struct RatesView: View {
     @EnvironmentObject var viewModel: ExchangeRateViewModel
     @State private var searchText = ""
-    
-    // --- ВИПРАВЛЕННЯ: Керування фокусом для миттєвого ховання клавіатури ---
     @FocusState private var isSearchFocused: Bool
 
     private var filteredRates: [String] {
-        let allSortedKeys = viewModel.rates.keys.sorted()
-        if searchText.isEmpty { return allSortedKeys }
+        // Отримуємо список (або всі, або тільки улюблені - залежить від ViewModel)
+        let sourceCurrencies = viewModel.availableCurrencies
+        
+        if searchText.isEmpty { return sourceCurrencies }
         
         let lowercasedQuery = searchText.lowercased()
-        return allSortedKeys.filter { currencyCode in
+        return sourceCurrencies.filter { currencyCode in
             let codeMatch = currencyCode.lowercased().contains(lowercasedQuery)
             let nameMatch = (viewModel.currencyNames[currencyCode] ?? "").lowercased().contains(lowercasedQuery)
             return codeMatch || nameMatch
@@ -23,16 +23,15 @@ struct RatesView: View {
         NavigationView {
             VStack(spacing: 0) {
                 
-                // --- 1. ПАНЕЛЬ ПОШУКУ ---
+                // --- Панель пошуку ---
                 VStack {
                     HStack(spacing: 12) {
                         HStack(spacing: 8) {
                             Image(systemName: "magnifyingglass")
                                 .foregroundColor(.gray)
                             
-                            TextField("Пошук (USD, Євро...)", text: $searchText)
+                            TextField("Пошук", text: $searchText)
                                 .textFieldStyle(.plain)
-                                // Прив'язуємо фокус сюди
                                 .focused($isSearchFocused)
                         }
                         .padding(.vertical, 10)
@@ -40,20 +39,17 @@ struct RatesView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(10)
                         
-                        // Кнопка "Скасувати"
                         if !searchText.isEmpty || isSearchFocused {
                             Button("Скасувати") {
-                                // Анімуємо все разом: і текст, і клавіатуру
                                 withAnimation {
                                     searchText = ""
-                                    isSearchFocused = false // Це миттєво ховає клавіатуру
+                                    isSearchFocused = false
                                 }
                             }
                             .foregroundColor(.accentColor)
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                         }
                     }
-                    // Анімація для зміни ширини поля пошуку
                     .animation(.default, value: searchText.isEmpty)
                     .animation(.default, value: isSearchFocused)
                 }
@@ -61,46 +57,65 @@ struct RatesView: View {
                 .padding(.vertical, 8)
                 .background(Color(.systemBackground))
                 
-                // --- 2. СПИСОК ВАЛЮТ ---
+                // --- Список ---
                 List {
                     if viewModel.isLoading && viewModel.rates.isEmpty {
-                        HStack {
-                            Spacer()
-                            ProgressView("Завантаження...")
-                            Spacer()
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        HStack { Spacer(); ProgressView("Завантаження..."); Spacer() }
+                            .listRowBackground(Color.clear).listRowSeparator(.hidden)
                     }
                     else if let errorMessage = viewModel.errorMessage, viewModel.rates.isEmpty {
                         VStack {
                             Text("⚠️").font(.largeTitle)
                             Text(errorMessage).foregroundColor(.red)
-                            Button("Спробувати знову") { viewModel.fetchRates() }
-                                .buttonStyle(.bordered)
+                            Button("Спробувати знову") { viewModel.fetchRates() }.buttonStyle(.bordered)
                         }
                         .frame(maxWidth: .infinity)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear).listRowSeparator(.hidden)
                     }
                     else {
-                        ForEach(filteredRates, id: \.self) { currency in
-                            if let rate = viewModel.rates[currency] {
-                                CurrencyRow(
-                                    currencyCode: currency,
-                                    rate: rate,
-                                    baseCurrency: viewModel.baseCurrency
-                                )
+                        // --- ЛОГІКА ДЛЯ ПОРОЖНЬОГО СПИСКУ ---
+                        if filteredRates.isEmpty {
+                            VStack(spacing: 16) {
+                                // Якщо увімкнено режим "Улюблені" і немає пошуку
+                                if viewModel.isFavoritesOnlyMode && searchText.isEmpty {
+                                    Image(systemName: "star.slash")
+                                        .font(.system(size: 50))
+                                        .foregroundColor(.gray.opacity(0.5))
+                                    Text("Список улюблених порожній")
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    Text("Натисніть на зірочку біля валюти, щоб додати її сюди.")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal)
+                                } else {
+                                    // Якщо просто нічого не знайдено через пошук
+                                    Text("Нічого не знайдено")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 200, alignment: .center)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        } else {
+                            // Відображення валют
+                            ForEach(filteredRates, id: \.self) { currency in
+                                if let rate = viewModel.rates[currency] {
+                                    CurrencyRow(
+                                        currencyCode: currency,
+                                        rate: rate,
+                                        baseCurrency: viewModel.baseCurrency
+                                    )
+                                }
                             }
                         }
                     }
                 }
                 .listStyle(.plain)
-                .refreshable {
-                    viewModel.fetchRates()
-                }
+                .refreshable { viewModel.fetchRates() }
                 
-                // --- 3. ДАТА ОНОВЛЕННЯ ---
+                // --- Дата оновлення ---
                 if !viewModel.rates.isEmpty {
                     VStack(spacing: 0) {
                         Divider()
@@ -113,8 +128,19 @@ struct RatesView: View {
                     }
                 }
             }
-            .navigationTitle("Курси Валют")
+            .navigationTitle(viewModel.isFavoritesOnlyMode ? "Улюблені" : "Курси Валют")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        withAnimation {
+                            viewModel.isFavoritesOnlyMode.toggle()
+                        }
+                    }) {
+                        Image(systemName: viewModel.isFavoritesOnlyMode ? "star.fill" : "star")
+                            .foregroundColor(viewModel.isFavoritesOnlyMode ? .orange : .accentColor)
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Picker("Базова валюта", selection: $viewModel.baseCurrency) {

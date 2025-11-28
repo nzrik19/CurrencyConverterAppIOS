@@ -8,6 +8,17 @@ class ExchangeRateViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastUpdated: String = "Оновлення..."
 
+    // --- Улюблені Валюти ---
+    @Published var favoriteCurrencies: Set<String> = [] {
+        didSet {
+            // Зберігаємо при кожній зміні (перетворюємо Set в Array)
+            UserSettings.shared.saveFavorites(Array(favoriteCurrencies))
+        }
+    }
+    
+    // Режим "Тільки улюблені" (Вмикається кнопкою зліва зверху)
+    @Published var isFavoritesOnlyMode: Bool = false
+
     @Published var baseCurrency: String = "UAH" {
         didSet {
             UserSettings.shared.saveBaseCurrency(baseCurrency)
@@ -18,49 +29,76 @@ class ExchangeRateViewModel: ObservableObject {
     @Published var currencyNames: [String: String] = [:]
 
     @Published var amountToConvert: String = "1"
-    @Published var fromCurrency: String = "EUR"
+    @Published var fromCurrency: String = "USD"
     @Published var toCurrency: String = "UAH"
     
+    // --- Обчислювана властивість: Доступні валюти ---
+    // Це впливає на ВСІ пікери (в конвертері і на головному)
     var availableCurrencies: [String] {
-        rates.keys.sorted()
+        let allCurrencies = rates.keys.sorted()
+        
+        if isFavoritesOnlyMode {
+            // Якщо режим увімкнено, повертаємо тільки улюблені, які є в списку курсів
+            return allCurrencies.filter { favoriteCurrencies.contains($0) }
+        } else {
+            // Інакше повертаємо всі
+            return allCurrencies
+        }
     }
 
     var convertedAmount: Double {
         let normalizedAmount = amountToConvert.replacingOccurrences(of: ",", with: ".")
         guard let amount = Double(normalizedAmount) else { return 0.0 }
-        guard let fromRate = rates[fromCurrency], let toRate = rates[toCurrency] else { return 0.0 }
+        
+        guard let fromRate = rates[fromCurrency],
+              let toRate = rates[toCurrency]
+        else { return 0.0 }
+        
         guard fromRate > 0 else { return 0.0 }
+        
         return amount * (toRate / fromRate)
     }
 
-    // --- ЛОГІКА ДАТИ ---
+    // --- Логіка дати ---
     private func formatUpdateDate(_ rawDate: String) -> String {
-        // Форматер для читання дати з API (формат RFC 1123: "Fri, 14 Nov 2025 00:00:01 +0000")
         let inputFormatter = DateFormatter()
         inputFormatter.dateFormat = "E, d MMM yyyy HH:mm:ss Z"
-        inputFormatter.locale = Locale(identifier: "en_US_POSIX") // Важливо для англійських назв (Fri, Nov)
+        inputFormatter.locale = Locale(identifier: "en_US_POSIX")
 
-        // Форматер для виводу українською
         let outputFormatter = DateFormatter()
-        outputFormatter.dateFormat = "d MMMM yyyy, HH:mm" // Напр: 14 листопада 2025, 14:00
+        outputFormatter.dateFormat = "d MMMM yyyy, HH:mm"
         outputFormatter.locale = Locale(identifier: "uk_UA")
 
         if let date = inputFormatter.date(from: rawDate) {
             return "Останнє оновлення: \(outputFormatter.string(from: date))"
         }
-        
-        // Якщо формат не підійшов, повертаємо як є
         return "Останнє оновлення: \(rawDate)"
     }
-    // ------------------
 
     init() {
         self.baseCurrency = UserSettings.shared.loadBaseCurrency()
+        // Завантажуємо улюблені зі сховища
+        self.favoriteCurrencies = Set(UserSettings.shared.loadFavorites())
+        
         Task {
             async let fetchRatesTask: () = fetchRates()
             async let fetchNamesTask: () = fetchCurrencyNames()
             _ = await (fetchRatesTask, fetchNamesTask)
         }
+    }
+    
+    // Функція для перемикання улюбленого статусу
+    func toggleFavorite(_ currency: String) {
+        if favoriteCurrencies.contains(currency) {
+            favoriteCurrencies.remove(currency)
+        } else {
+            favoriteCurrencies.insert(currency)
+        }
+    }
+    
+    // Перевірка, чи є валюта улюбленою
+    func isFavorite(_ currency: String) -> Bool {
+        return favoriteCurrencies.contains(currency)
     }
 
     func fetchRates() {
@@ -70,9 +108,7 @@ class ExchangeRateViewModel: ObservableObject {
         Task {
             do {
                 let response = try await NetworkManager.shared.fetchRates(for: baseCurrency)
-                
                 self.rates = response.conversionRates
-                // ВИКОРИСТОВУЄМО ФОРМАТУВАННЯ ТУТ:
                 self.lastUpdated = formatUpdateDate(response.timeLastUpdateUTC)
                 self.errorMessage = nil
                 

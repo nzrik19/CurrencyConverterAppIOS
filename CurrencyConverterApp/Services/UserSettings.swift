@@ -1,23 +1,31 @@
 import Foundation
 
-// Клас-обгортка для роботи з UserDefaults.
-// Це робить код чистішим і дозволяє легко змінювати спосіб зберігання.
 class UserSettings {
     
     static let shared = UserSettings()
     private let defaults = UserDefaults.standard
-    private let baseCurrencyKey = "baseCurrency" // Ключ для збереження
-
+    
+    private let baseCurrencyKey = "baseCurrency"
+    private let favoriteCurrenciesKey = "favoriteCurrencies"
+    
     private init() {}
     
-    // Зберігаємо обрану базову валюту.
-    func saveBaseCurrency(_ currency: String) {
-        defaults.set(currency, forKey: baseCurrencyKey)
+    // --- Базова валюта ---
+    func saveBaseCurrency(_ code: String) {
+        defaults.set(code, forKey: baseCurrencyKey)
     }
     
-    // Завантажуємо збережену валюту. Якщо нічого не збережено, повертаємо UAH.
     func loadBaseCurrency() -> String {
         return defaults.string(forKey: baseCurrencyKey) ?? "UAH"
     }
+    
+    // --- Улюблені валюти ---
+    func saveFavorites(_ codes: [String]) {
+        defaults.set(codes, forKey: favoriteCurrenciesKey)
+    }
+    
+    func loadFavorites() -> [String] {
+        // ВИПРАВЛЕННЯ: Повертаємо порожній список за замовчуванням
+        return defaults.stringArray(forKey: favoriteCurrenciesKey) ?? []
+    }
 }
-
